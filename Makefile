@@ -1,6 +1,7 @@
 BROWSER=firefox
 
 install: 
-	pipenv install && pipenv shell && pre-commit autoupdate
+	pipenv install
+
 open-repo:
 	${BROWSER} -url "https://github.com/guimassoqueto/scraper-beautiful-soup"
