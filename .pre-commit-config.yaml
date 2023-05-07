@@ -1,17 +1,13 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v2.3.0
+    rev: v4.4.0
     hooks:
       - id: check-yaml
       - id: end-of-file-fixer
       - id: trailing-whitespace
-  - repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
-    rev: v8.0.0
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v2.2.0
     hooks:
-      - id: commitlint
+      - id: conventional-pre-commit
         stages: [commit-msg]
-        additional_dependencies: ["@open-turo/commitlint-config-conventional"]
-  - repo: https://github.com/psf/black
-    rev: 22.10.0
-    hooks:
-      - id: black
+        args: [] # optional: list of Conventional Commits types to allow e.g. [feat, fix, ci, chore, test]
