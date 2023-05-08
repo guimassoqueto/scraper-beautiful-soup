@@ -13,7 +13,7 @@ repos:
   - repo: local
     hooks:
     -   id: pytest-check
-        stages: [commit-msg]
+        stages: [commit]
         types: [python]
         name: pytest-check
         entry: pipenv run test
