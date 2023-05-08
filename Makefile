@@ -1,9 +1,10 @@
 FIREFOX=firefox -url
 CHROME=google-chrome
 
+
 # install all dependencies
 install: 
-	pipenv install
+	poetry install
 
 # install pre-commit, update its dependencies and install hook for commit messages
 prepare:
