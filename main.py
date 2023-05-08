@@ -1,1 +1,2 @@
-print(123)
+def name(a: str) -> int:
+    return 5
