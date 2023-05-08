@@ -9,3 +9,5 @@ repos:
     rev: v2.0.2
     hooks:
       - id: autopep8
+        args: [--indent-size=2]
+        
