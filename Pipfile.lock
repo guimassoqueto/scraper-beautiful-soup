@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "b8b15541e76c1e355dbf9ef657a268b452fdc7c99799d9401cb80e6808321d01"
+            "sha256": "85ed9559e95458d5fe891e817678e154cec44b4f01d6f9609cecf4e53ceb8a56"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -16,7 +16,8 @@
             }
         ]
     },
-    "default": {
+    "default": {},
+    "develop": {
         "cfgv": {
             "hashes": [
                 "sha256:c6a0883f3917a037485059700b9e75da2464e6c27051014ad85ba6aaa5884426",
@@ -134,6 +135,5 @@
             "markers": "python_version >= '3.7'",
             "version": "==20.23.0"
         }
-    },
-    "develop": {}
+    }
 }
