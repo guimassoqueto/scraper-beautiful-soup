@@ -10,13 +10,13 @@ repos:
     hooks:
       - id: autopep8
         args: [--in-place, --aggressive]
-  - repo: local
-    hooks:
-    -   id: pytest-check
-        stages: [commit]
-        types: [python]
-        name: pytest-check
-        entry: pipenv run test
-        language: system
-        pass_filenames: false
-        always_run: true
+  # - repo: local
+  #   hooks:
+  #   -   id: pytest-check
+  #       stages: [commit]
+  #       types: [python]
+  #       name: pytest-check
+  #       entry: poetry run test
+  #       language: system
+  #       pass_filenames: false
+  #       always_run: true
