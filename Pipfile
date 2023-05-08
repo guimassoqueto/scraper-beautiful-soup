@@ -5,6 +5,8 @@ name = "pypi"
 
 [packages]
 beautifulsoup4 = "*"
+requests = "*"
+fake-useragent = "*"
 
 [dev-packages]
 pre-commit = "*"
