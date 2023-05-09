@@ -1,30 +1,6 @@
 from bs4 import BeautifulSoup
-from fake_useragent import UserAgent
 import re
-import requests
-
-
-def get_soup(url: str) -> BeautifulSoup:
-    user_agent = UserAgent()
-    random_user_agent = user_agent.random
-    header = {
-        'Accept': '*/*',
-        'User-Agent': random_user_agent,
-        'Accept-Language': 'pt-BR,pt;q=0.8,en-US;q=0.5,en;q=0.3'
-    }
-    is_captcha = True
-
-    while (is_captcha):
-        page = requests.get(url, headers=header)
-        assert page.status_code == 200
-        soup = BeautifulSoup(page.content, 'html.parser')
-
-        if 'captcha' in str(soup):
-            print('bot detected')
-        else:
-            print('bot bypassed')
-
-        return soup
+from app.utils.soup import get_soup
 
 
 def get_product_name(soup: BeautifulSoup) -> str:
@@ -104,4 +80,4 @@ def generate_product_info_dict(product_url: str) -> dict:
         return product_info
     except Exception as e:
         # TODO: remove print and add logger
-        print(e)
+        print(e, {'product_url': product_url})
