@@ -1,6 +1,30 @@
+from fake_useragent import UserAgent
 from bs4 import BeautifulSoup
+from requests import get
 import re
-from app.utils.soup import get_soup
+
+
+def get_soup(url: str) -> BeautifulSoup:
+    user_agent = UserAgent()
+    random_user_agent = user_agent.random
+    header = {
+        'Accept': '*/*',
+        'User-Agent': random_user_agent,
+        'Accept-Language': 'pt-BR,pt;q=0.8,en-US;q=0.5,en;q=0.3'
+    }
+    is_captcha = True
+
+    while (is_captcha):
+        page = get(url, headers=header)
+        assert page.status_code == 200
+        soup = BeautifulSoup(page.content, 'html.parser')
+
+        if 'captcha' in str(soup):
+            print('bot detected')
+        else:
+            print('bot bypassed')
+
+        return soup
 
 
 def get_product_name(soup: BeautifulSoup) -> str:
@@ -15,9 +39,17 @@ def get_product_category(soup: BeautifulSoup) -> str:
     return main_category.strip()
 
 
+def get_product_reviews_quantity(soup: BeautifulSoup) -> int:
+    review_text = soup.find(id="acrCustomerReviewText").text
+    regex = r"^([\d\.]*)"
+    reviews_qtt = re.search(regex, review_text)[0]
+    count = reviews_qtt.replace('.', '') if reviews_qtt else 0
+    return count
+
+
 def get_product_image_url(soup: BeautifulSoup) -> str:
     image_tag = soup.find(id="landingImage").decode()
-    regex = r"([\w\d\.\/\:\-]+.jpg)\":\[6\d{2},6\d{2}\]"
+    regex = r"([\w\d\.\/\:\-]+.jpg)\":\[5\d{2},5\d{2}\]"
     image_url = re.search(regex, image_tag)
 
     assert image_url is not None, "please verify if the product image is beng captured correctly"
@@ -66,6 +98,7 @@ def generate_product_info_dict(product_url: str) -> dict:
         product_name = get_product_name(soup)
         product_image = get_product_image_url(soup)
         product_prices = get_product_prices(soup)
+        product_reviews = get_product_reviews_quantity(soup)
 
         product_prices_dict = gen_product_prices_and_discount_dict(
             product_prices)
@@ -74,6 +107,7 @@ def generate_product_info_dict(product_url: str) -> dict:
         product_info['product_category'] = product_category
         product_info['product_name'] = product_name
         product_info['product_image'] = product_image
+        product_info['reviews'] = product_reviews
 
         product_info.update(product_prices_dict)
 
@@ -81,3 +115,7 @@ def generate_product_info_dict(product_url: str) -> dict:
     except Exception as e:
         # TODO: remove print and add logger
         print(e, {'product_url': product_url})
+
+
+info = generate_product_info_dict('http://localhost:8080/amazon')
+print(info)
