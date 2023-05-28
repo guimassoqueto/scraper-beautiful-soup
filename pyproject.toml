@@ -9,7 +9,7 @@ packages = [{include = "scraper_beautiful_soup"}]
 [tool.poetry.dependencies]
 python = "^3.10"
 beautifulsoup4 = "^4.12.2"
-requests = "^2.30.0"
+requests = "^2.31.0"
 fake-useragent = "^1.1.3"
 
 
