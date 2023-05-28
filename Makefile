@@ -11,5 +11,5 @@ prepare:
 	pre-commit install && pre-commit autoupdate && pre-commit install --hook-type commit-msg
 
 # open repo in web browser. Change to CHROME if using google chrome
-open-repo:
+or:
 	${FIREFOX} "https://github.com/guimassoqueto/scraper-beautiful-soup"
