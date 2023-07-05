@@ -2,21 +2,25 @@ repos:
   - repo: https://github.com/compilerla/conventional-pre-commit
     rev: v2.2.0
     hooks:
-      - id: conventional-pre-commit
-        stages: [commit-msg]
-        args: [] # optional: list of Conventional Commits types to allow e.g. [feat, fix, ci, chore, test]
-  - repo: https://github.com/pre-commit/mirrors-autopep8
-    rev: v2.0.2
+    - id: conventional-pre-commit
+      stages: [commit-msg]
+      args: [feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert]
+  
+  - repo: local
     hooks:
-      - id: autopep8
-        args: [--in-place, --aggressive]
-  # - repo: local
-  #   hooks:
-  #   -   id: pytest-check
-  #       stages: [commit]
-  #       types: [python]
-  #       name: pytest-check
-  #       entry: poetry run test
-  #       language: system
-  #       pass_filenames: false
-  #       always_run: true
+    - id: tests
+      name: run tests
+      entry: pytest tests/
+      language: python
+      types: [python]
+      stages: [commit]
+
+  - repo: https://github.com/psf/black
+    rev: 23.3.0
+    hooks:
+    - id: black
+      name: lint python
+      language_version: python3.10 
+      stages: [commit]
+      args:
+        - --target-version=py310

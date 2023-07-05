@@ -1,2 +1,0 @@
-extends:
-  - "@open-turo/commitlint-config-conventional"
