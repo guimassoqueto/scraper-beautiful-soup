@@ -39,6 +39,11 @@ class PostgresDB:
         self.cur.execute(upsert_query(table, item))
         self.connection.commit()
 
+    def select_non_inserted_ids(self, query: str) -> list:
+        self.cur.execute(query)
+        results = self.cur.fetchall()
+        return results
+
 
 class SingletonMetaThreadSafe(type):
     _instances = {}
@@ -67,6 +72,11 @@ class PostgresSingletonSafe(metaclass=SingletonMetaThreadSafe):
         self.cur.execute(upsert_query(table, item))
         self.connection.commit()
 
+    def select_non_inserted_ids(self, query: str) -> list:
+        self.cur.execute(query)
+        results = self.cur.fetchall()
+        return results
+
 
 class SingletonMetaThreadUnsafe(type):
     _instances = {}
@@ -92,3 +102,8 @@ class PostgresSingleton(metaclass=SingletonMetaThreadUnsafe):
     def insert_item(self, table: str, item: dict) -> None:
         self.cur.execute(upsert_query(table, item))
         self.connection.commit()
+
+    def select_non_inserted_ids(self, query: str) -> list:
+        self.cur.execute(query)
+        results = self.cur.fetchall()
+        return results

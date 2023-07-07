@@ -12,7 +12,7 @@ def get_soup(pid: str, header: dict) -> BeautifulSoup:
 
 def get_title(soup: BeautifulSoup):
     assert soup.title.string is not None, "title must not be None"
-    return re.sub(r"[^a-zA-Z0-9_\s\.]", "", soup.title.string)
+    return re.sub(r"[^a-zA-Zà-úÀ-Ú0-9_\s\./]", "", soup.title.string)
 
 
 def get_reviews(soup: BeautifulSoup):
