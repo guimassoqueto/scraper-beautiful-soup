@@ -5,6 +5,7 @@ from app.spiders.amazon import get_item
 from bs4 import BeautifulSoup
 from aiohttp import ClientSession
 import asyncio
+from asyncio import Semaphore
 
 
 def get_failed_products_generator(
@@ -25,26 +26,29 @@ def write_errors(line: str):
         f.write(f"{line}\n")
 
 
-async def scrap(pid: str, header: dict) -> BeautifulSoup:
+async def scrap(pid: str, header: dict, limit: Semaphore) -> BeautifulSoup:
     url = f"https://amazon.com.br/dp/{pid}"
-    async with ClientSession(headers=header) as session:
-        async with session.get(url) as response:
-            assert response.status == 200, "Status Code must be 200"
-            try:
-                body = await response.text()
-                soup = BeautifulSoup(body, "html.parser")
-                item = get_item(pid, soup)
-                pg = PostgresDB()
-                await pg.upsert_item("products", item)
-            except Exception as e:
-                write_errors(pid)
+    async with limit:
+        async with ClientSession(headers=header) as session:
+            async with session.get(url) as response:
+                assert response.status == 200, "Status Code must be 200"
+                try:
+                    body = await response.text()
+                    soup = BeautifulSoup(body, "html.parser")
+                    item = get_item(pid, soup)
+                    pg = PostgresDB()
+                    await pg.upsert_item("products", item)
+                    print("ok: ", pid)
+                except Exception as e:
+                    write_errors(pid)
 
 
 async def main():
+    limit = asyncio.Semaphore(8)
     tasks = []
     failed_pids = get_failed_products_generator()
     for pid in failed_pids:
-        task = asyncio.create_task(scrap(pid, fake_header()))
+        task = asyncio.create_task(scrap(pid, fake_header(), limit))
         tasks.append(task)
     result = await asyncio.gather(*tasks)
     return result
