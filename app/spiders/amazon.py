@@ -1,14 +1,6 @@
 from bs4 import BeautifulSoup
-from requests import get
 from bs4.element import Tag
 import re
-
-
-def get_soup(pid: str, header: dict) -> BeautifulSoup:
-    url = f"https://amazon.com.br/dp/{pid}"
-    page = get(url, headers=header)
-    assert page.status_code == 200, "Status Code must be 200"
-    return BeautifulSoup(page.content, "html.parser")
 
 
 def get_title(soup: BeautifulSoup):
@@ -137,10 +129,9 @@ def get_discount(soup: BeautifulSoup) -> int:
     return 0
 
 
-def get_item(pid: str, header: dict) -> dict:
+def get_item(pid: str, soup: BeautifulSoup) -> dict:
     item = {}
     item["id"] = pid
-    soup = get_soup(pid, header)
     item["title"] = get_title(soup)
     item["category"] = get_category(soup)
     item["reviews"] = get_reviews(soup)
