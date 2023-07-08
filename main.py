@@ -1,7 +1,10 @@
 from typing import Generator
-from app.helpers.postgres import PostgresSingleton
+from app.helpers.postgres import PostgresDB
 from app.helpers.fake_header import fake_header
 from app.spiders.amazon import get_item
+from bs4 import BeautifulSoup
+from aiohttp import ClientSession
+import asyncio
 
 
 def get_failed_products_generator(
@@ -22,18 +25,30 @@ def write_errors(line: str):
         f.write(f"{line}\n")
 
 
-if __name__ == "__main__":
+async def scrap(pid: str, header: dict) -> BeautifulSoup:
+    url = f"https://amazon.com.br/dp/{pid}"
+    async with ClientSession(headers=header) as session:
+        async with session.get(url) as response:
+            assert response.status == 200, "Status Code must be 200"
+            try:
+                body = await response.text()
+                soup = BeautifulSoup(body, "html.parser")
+                item = get_item(pid, soup)
+                pg = PostgresDB()
+                await pg.upsert_item("products", item)
+            except Exception as e:
+                write_errors(pid)
+
+
+async def main():
+    tasks = []
     failed_pids = get_failed_products_generator()
-    count = 1
     for pid in failed_pids:
-        try:
-            pg = PostgresSingleton()
-            pg.insert_item("products", get_item(pid, fake_header()))
-            print(
-                f"inserted #{count}: {pid}",
-            )
-            count += 1
-        except Exception as e:
-            print(e)
-            write_errors(f"{pid}")
-            continue
+        task = asyncio.create_task(scrap(pid, fake_header()))
+        tasks.append(task)
+    result = await asyncio.gather(*tasks)
+    return result
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
