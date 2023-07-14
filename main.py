@@ -1,23 +1,13 @@
-from typing import Generator
 from app.helpers.postgres import PostgresDB
+from app.helpers.get_failed_products_generator import get_failed_products_generator
 from app.helpers.fake_header import fake_header
-from app.spiders.amazon import get_item
-from bs4 import BeautifulSoup
-from aiohttp import ClientSession
-import asyncio
-from asyncio import Semaphore
-
-
-def get_failed_products_generator(
-    pid_errors: str = "insertion_errors.log",
-) -> Generator[str, None, None]:
-    pids = []
-    with open(pid_errors, "r", encoding="utf-8") as file:
-        for product_id in file:
-            product_id = product_id.strip()
-            pids.append(product_id)
-
-    return (pid for pid in pids)
+from app.spiders.amazon_scraper import amazon_scraper
+from app.settings import NON_INSERTED_PIDS_FOLDER
+from asyncio import Semaphore, run, gather, create_task
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+from os import remove, mkdir
+from os.path import exists
 
 
 def write_errors(line: str):
@@ -26,33 +16,38 @@ def write_errors(line: str):
         f.write(f"{line}\n")
 
 
-async def scrap(pid: str, header: dict, limit: Semaphore) -> BeautifulSoup:
-    url = f"https://amazon.com.br/dp/{pid}"
-    async with limit:
-        async with ClientSession(headers=header) as session:
-            async with session.get(url) as response:
-                assert response.status == 200, "Status Code must be 200"
-                try:
-                    body = await response.text()
-                    soup = BeautifulSoup(body, "html.parser")
-                    item = get_item(pid, soup)
-                    pg = PostgresDB()
-                    await pg.upsert_item("products", item)
-                    print("ok: ", pid)
-                except Exception as e:
-                    write_errors(pid)
-
-
-async def main():
-    limit = asyncio.Semaphore(8)
+async def main(non_inserted_pids_file: str):
+    limit = Semaphore(8)
     tasks = []
-    failed_pids = get_failed_products_generator()
+    failed_pids = get_failed_products_generator(non_inserted_pids_file)
+    remove(non_inserted_pids_file)
     for pid in failed_pids:
-        task = asyncio.create_task(scrap(pid, fake_header(), limit))
+        task = create_task(amazon_scraper(pid, fake_header(), limit))
         tasks.append(task)
-    result = await asyncio.gather(*tasks)
+    result = await gather(*tasks)
     return result
 
 
+class FolderScanner(FileSystemEventHandler):
+    def on_created(self, event):
+        print(f"File created: {event.src_path}")
+        async_result = run(main(event.src_path))
+        if async_result:
+            print("All insertions Complete.")
+            
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    if (not exists(NON_INSERTED_PIDS_FOLDER)): mkdir(NON_INSERTED_PIDS_FOLDER)
+
+    print(f"Scanning ./{NON_INSERTED_PIDS_FOLDER} folder...")
+
+    try:
+        observer = Observer()
+        event_handler = FolderScanner()
+        observer.schedule(event_handler, NON_INSERTED_PIDS_FOLDER, recursive=False)
+        observer.start()
+    except Exception as e:
+        print(e)
+        observer.stop()
+    observer.join()
