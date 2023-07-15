@@ -1,4 +1,4 @@
-from app.helpers.postgres import PostgresDB
+from app.helpers.database.postgres import PostgresDB
 from app.spiders.amazon_item import get_item
 from aiohttp import ClientSession
 from asyncio import Semaphore
