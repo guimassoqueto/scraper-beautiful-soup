@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "scraper-beautiful-soup"
-version = "0.1.0"
+version = "2.0.0"
 description = ""
 authors = ["guimassoqueto <gui.massoqueto@gmail.com>"]
 readme = "README.md"
@@ -28,6 +28,3 @@ notebook = "^6.5.4"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
-
-[tool.poetry.scripts]
-test = "pytest tests/*"
