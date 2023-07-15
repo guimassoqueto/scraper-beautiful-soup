@@ -1,13 +1,21 @@
-from app.helpers.postgres import PostgresDB
-from app.helpers.get_failed_products_generator import get_failed_products_generator
 from app.helpers.fake_header import fake_header
+from app.helpers.database.postgres import PostgresDB
+from app.helpers.database.database_queries.queries import basic_select_query
 from app.spiders.amazon_scraper import amazon_scraper
-from app.settings import NON_INSERTED_PIDS_FOLDER
-from asyncio import Semaphore, run, gather, create_task
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
-from os import remove, mkdir
-from os.path import exists
+from asyncio import Semaphore, gather, create_task
+from pika import PlainCredentials, BlockingConnection, ConnectionParameters
+from pika.adapters.blocking_connection import BlockingChannel
+from pika.spec import Basic
+from pika.spec import BasicProperties
+from asyncio import run
+from json import loads
+from app.helpers.rabbitmq.publisher import RabbitMQPublisher
+from app.settings import (
+                            RABBITMQ_DEFAULT_HOST, 
+                            RABBITMQ_DEFAULT_USER, 
+                            RABBITMQ_DEFAULT_PASS, 
+                            RABBITMQ_RECEIVER_QUEUE
+                         )
 
 
 def write_errors(line: str):
@@ -16,38 +24,53 @@ def write_errors(line: str):
         f.write(f"{line}\n")
 
 
-async def main(non_inserted_pids_file: str):
+async def main(non_inserted_pids: list):
     limit = Semaphore(8)
     tasks = []
-    failed_pids = get_failed_products_generator(non_inserted_pids_file)
-    remove(non_inserted_pids_file)
-    for pid in failed_pids:
+    for pid in non_inserted_pids:
         task = create_task(amazon_scraper(pid, fake_header(), limit))
         tasks.append(task)
     result = await gather(*tasks)
     return result
 
 
-class FolderScanner(FileSystemEventHandler):
-    def on_created(self, event):
-        print(f"File created: {event.src_path}")
-        async_result = run(main(event.src_path))
-        if async_result:
-            print("All insertions Complete.")
-            
+def callback(
+    channel: BlockingChannel, 
+    method: Basic.Deliver, 
+    properties: BasicProperties, 
+    body: bytes
+):
+    non_inserted_pids = loads(body)
+    print(body)
+    print(f"{len(non_inserted_pids)} pids received...")
+    result = run(main(non_inserted_pids))
+    if (result):
+        pg = PostgresDB()
+        pids = pg.select(basic_select_query)
+        publisher = RabbitMQPublisher()
+        publisher.publish_pids([pid[0] for pid in pids])
+
+
+def receiver():
+    credentials = PlainCredentials(RABBITMQ_DEFAULT_USER, RABBITMQ_DEFAULT_PASS)
+    connection = BlockingConnection(ConnectionParameters(RABBITMQ_DEFAULT_HOST,
+                                                        credentials=credentials))
+    channel = connection.channel()
+    channel.queue_declare(RABBITMQ_RECEIVER_QUEUE)
+
+    # consumer
+    channel.basic_consume(
+        queue=RABBITMQ_RECEIVER_QUEUE,
+        auto_ack=True,
+        on_message_callback=callback
+    )
+
+    print('Waiting for new messages. To exit press CTRL+C')
+    channel.start_consuming()
 
 
 if __name__ == "__main__":
-    if (not exists(NON_INSERTED_PIDS_FOLDER)): mkdir(NON_INSERTED_PIDS_FOLDER)
-
-    print(f"Scanning ./{NON_INSERTED_PIDS_FOLDER} folder...")
-
     try:
-        observer = Observer()
-        event_handler = FolderScanner()
-        observer.schedule(event_handler, NON_INSERTED_PIDS_FOLDER, recursive=False)
-        observer.start()
-    except Exception as e:
-        print(e)
-        observer.stop()
-    observer.join()
+        receiver()
+    except KeyboardInterrupt:
+        print('Interrupted')
