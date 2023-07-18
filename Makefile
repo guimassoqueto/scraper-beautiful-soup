@@ -15,4 +15,4 @@ or:
 	${FIREFOX} "https://github.com/guimassoqueto/scraper-beautiful-soup"
 
 a:
-	docker compose up redis -d && poetry run python main.py
+	poetry run python main.py
