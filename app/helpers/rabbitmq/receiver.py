@@ -1,7 +1,4 @@
 from pika import PlainCredentials, BlockingConnection, ConnectionParameters
-from pika.adapters.blocking_connection import BlockingChannel
-from pika.spec import Basic
-from pika.spec import BasicProperties
 from app.settings import (
                       RABBITMQ_DEFAULT_HOST, 
                       RABBITMQ_DEFAULT_USER, 
@@ -9,30 +6,24 @@ from app.settings import (
                       RABBITMQ_RECEIVER_QUEUE
                     )
 
-
-def callback(
-    channel: BlockingChannel, 
-    method: Basic.Deliver, 
-    properties: BasicProperties, 
-    body: bytes
-  ):
-  failed_pids = list(body)
-  print("PIDS received...")
+"""
+This code follows the basic RabbitMQ tutorial:
+https://rabbitmq.com/tutorials/tutorial-one-python.html
+"""
 
 
-
-def receiver():
+def receiver(message_handler):
   credentials = PlainCredentials(RABBITMQ_DEFAULT_USER, RABBITMQ_DEFAULT_PASS)
   connection = BlockingConnection(ConnectionParameters(RABBITMQ_DEFAULT_HOST,
-                                                        credentials=credentials))
+                                                                 credentials=credentials))
   channel = connection.channel()
-  channel.queue_declare(RABBITMQ_RECEIVER_QUEUE)
+  channel.queue_declare(RABBITMQ_RECEIVER_QUEUE, durable=False)
 
   # consumer
   channel.basic_consume(
     queue=RABBITMQ_RECEIVER_QUEUE,
-    auto_ack=True,
-    on_message_callback=callback
+    auto_ack=False, # message acknoledgement
+    on_message_callback=message_handler
   )
 
   print('Waiting for new messages. To exit press CTRL+C')

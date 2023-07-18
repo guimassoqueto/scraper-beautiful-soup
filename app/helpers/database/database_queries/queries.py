@@ -18,10 +18,19 @@ def upsert_query(table: str, item: dict) -> str:
     return insert + values + on_conflict
 
 
-basic_select_query = """
-select * from products
-where category ilike any (ARRAY['%higiene', '%alimentos%', '%automotivo%','%bolsas%', '%casa%', '%jardim%', '%limpeza%', '%games%', '%consoles%', '%kindle%', '%echo%', '%smartphone%', '%informática%', '%computador%'])
-and reviews > 50
-and discount > 20
-order by discount asc;
-"""
+def basic_select_query(timestamp: str):
+    return f"""
+        WITH pt AS
+        (
+            SELECT * FROM products WHERE category ILIKE ANY (ARRAY['%eletrônico%', '%tecnologia%', '%pet shop%', '%cozinha%', '%alimentos%', '%automotivo%','%bolsas%', '%casa%', '%jardim%', '%limpeza%', '%games%', '%consoles%', '%echo%', '%smartphone%', '%informática%', '%computador%'])
+            AND reviews > 100
+            AND discount >= 20
+            UNION
+            SELECT * FROM products  WHERE category ILIKE ANY (ARRAY['%beleza%', '%bebê%', '%higiene%'])
+            AND reviews > 100
+            AND discount >= 10
+        )
+        SELECT id FROM pt
+        WHERE created_at BETWEEN '{timestamp}' AND NOW()
+        ORDER BY reviews DESC LIMIT 100;
+    """
