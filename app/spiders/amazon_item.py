@@ -1,11 +1,13 @@
 from bs4 import BeautifulSoup
 from bs4.element import Tag
 import re
+import json
 
 
 def get_title(soup: BeautifulSoup):
-    assert soup.title.string is not None, "title must not be None"
-    return re.sub(r"[^a-zA-Zà-úÀ-Ú0-9_\s\./]", "", soup.title.string)
+    title = soup.find(id='productTitle')
+    if title: return re.sub(r"[^a-zA-Zà-úÀ-Ú0-9_\s\./]", "", title.get_text().strip()) 
+    return "Not Defined"
 
 
 def get_reviews(soup: BeautifulSoup):
@@ -74,6 +76,45 @@ def loop_price_selectors(element: Tag):
     return None
 
 
+def get_biggest_image(element: Tag):
+    images = element.get('data-a-dynamic-image', None)
+    if images:
+        images = list(json.loads(images).keys())
+        return images[-1]
+    return None
+
+
+def get_image_url(soup: BeautifulSoup) -> str:
+    #v1
+    image_element = soup.find('img', {'class': 'a-dynamic-image'})
+    if image_element:
+        image_url = image_element.get('data-old-hires', None)
+        if image_url: return image_url
+    del image_element
+    
+    # v2
+    image_element = soup.find(id='landingImage')
+    if image_element:
+        image_url = image_element.get('data-old-hires', None)
+        if image_url: return image_url
+    del image_element
+    
+    # v3
+    image_element = soup.find(id='landingImage')
+    if image_element: 
+        image_url = get_biggest_image(image_element)
+        if image_url: return image_url
+        
+    # livros físicos
+    image_element = soup.find(id='ebooksImgBlkFront')
+    if image_element: 
+        image_url = get_biggest_image(image_element)
+        if image_url: return image_url
+    del image_element
+    
+    return 'https://raw.githubusercontent.com/guimassoqueto/mocks/main/images/404.webp'
+
+
 def get_price(soup: BeautifulSoup) -> float:
     price_container_element = soup.find(id="corePrice_feature_div")
     if price_container_element:
@@ -93,6 +134,26 @@ def get_price(soup: BeautifulSoup) -> float:
     if ebook_price:
         return convert_price_to_number(ebook_price.text)
 
+    return 0.0
+
+
+def get_previous_price(soup: BeautifulSoup):
+    basis_price_element = soup.find('span', {'class': 'basisPrice'})
+    if basis_price_element:
+        previous_price = basis_price_element.find('span', {'class': 'a-offscreen'})
+        if previous_price: return convert_price_to_number(previous_price.text)
+    del basis_price_element
+    
+    # ebooks
+    basis_price_element = soup.find(id='digital-list-price')
+    if basis_price_element: return convert_price_to_number(basis_price_element.text)
+    del basis_price_element
+    
+    # livros físicos
+    basis_price_element = soup.find(id='listPrice')
+    if basis_price_element: return convert_price_to_number(basis_price_element.text)
+    del basis_price_element
+    
     return 0.0
 
 
@@ -133,9 +194,11 @@ def get_item(pid: str, soup: BeautifulSoup) -> dict:
     item = {}
     item["id"] = pid
     item["title"] = get_title(soup)
+    item["image_url"] = get_image_url(soup)
     item["category"] = get_category(soup)
     item["reviews"] = get_reviews(soup)
     item["is_prime"] = get_is_prime(soup)
     item["price"] = get_price(soup)
+    item["previous_price"] = get_previous_price(soup)
     item["discount"] = get_discount(soup)
     return item
