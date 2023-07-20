@@ -4,6 +4,8 @@ from aiohttp import ClientSession
 from asyncio import Semaphore
 from bs4 import BeautifulSoup
 
+from asyncio import run, Semaphore
+from app.helpers.fake_header import fake_header
 
 async def amazon_scraper(pid: str, header: dict, limit: Semaphore) -> BeautifulSoup:
     url = f"https://amazon.com.br/dp/{pid}"
@@ -19,4 +21,5 @@ async def amazon_scraper(pid: str, header: dict, limit: Semaphore) -> BeautifulS
                     await pg.upsert_item("products", item)
                     print("ok: ", pid)
                 except Exception as e:
+                    print(e)
                     print("Error:", pid)
