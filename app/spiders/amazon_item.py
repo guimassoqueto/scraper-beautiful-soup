@@ -1,12 +1,29 @@
+from app.helpers.utils.regex_replacer import regex_replacer
 from bs4 import BeautifulSoup
 from bs4.element import Tag
+from pydantic import BaseModel
 import re
 import json
 
 
+class Product(BaseModel):
+    id: str
+    title: str
+    image_url: str
+    category: str
+    price: float
+    previous_price: float
+    discount: int
+    reviews: int
+    free_shipping: str
+
+
+
+
+
 def get_title(soup: BeautifulSoup):
     title = soup.find(id='productTitle')
-    if title: return re.sub(r"[^a-zA-Zà-úÀ-Ú0-9_\s\./]", "", title.get_text().strip()) 
+    if title: return regex_replacer(title.get_text().strip())
     return "Not Defined"
 
 
@@ -28,12 +45,12 @@ def get_category(soup: BeautifulSoup, delimiter: str = " > "):
     inner_text = re.findall(r">\n([\s/\n\w]+)<", element)
     if inner_text:
         return delimiter.join(
-            set([txt.strip() for txt in inner_text if txt.strip() != ""])
+            set([txt.strip().replace("'", "''") for txt in inner_text if txt.strip() != ""])
         )
     return "Not Defined"
 
 
-def get_is_prime(soup: BeautifulSoup) -> str:
+def get_free_shipping(soup: BeautifulSoup) -> str:
     prime_div = soup.find(id="primeSavingsUpsellCaption_feature_div")
     if prime_div is not None:
         return "true"
@@ -112,6 +129,13 @@ def get_image_url(soup: BeautifulSoup) -> str:
         if image_url: return image_url
     del image_element
     
+    # livros físicos v2
+    image_element = soup.find(id='imgBlkFront')
+    if image_element: 
+        image_url = get_biggest_image(image_element)
+        if image_url: return image_url
+    del image_element
+    
     return 'https://raw.githubusercontent.com/guimassoqueto/mocks/main/images/404.webp'
 
 
@@ -154,7 +178,14 @@ def get_previous_price(soup: BeautifulSoup):
     if basis_price_element: return convert_price_to_number(basis_price_element.text)
     del basis_price_element
     
-    return 0.0
+    # ração em tabela
+    basis_price_element = soup.find('span', {'class': 'a-price a-text-price a-size-base'})
+    if basis_price_element: 
+        previous_price = basis_price_element.find('span', {'class': 'a-offscreen'})
+        if previous_price: return convert_price_to_number(previous_price.text)
+    del basis_price_element
+    
+    return None
 
 
 def convert_discount_to_number(discount_string: str) -> int:
@@ -191,14 +222,16 @@ def get_discount(soup: BeautifulSoup) -> int:
 
 
 def get_item(pid: str, soup: BeautifulSoup) -> dict:
-    item = {}
-    item["id"] = pid
-    item["title"] = get_title(soup)
-    item["image_url"] = get_image_url(soup)
-    item["category"] = get_category(soup)
-    item["reviews"] = get_reviews(soup)
-    item["is_prime"] = get_is_prime(soup)
-    item["price"] = get_price(soup)
-    item["previous_price"] = get_previous_price(soup)
-    item["discount"] = get_discount(soup)
-    return item
+    item = Product(**{
+        "id": pid,
+        "title": get_title(soup),
+        "image_url": get_image_url(soup),
+        "category": get_category(soup),
+        "reviews": get_reviews(soup),
+        "free_shipping": get_free_shipping(soup),
+        "price": get_price(soup),
+        "previous_price": get_previous_price(soup),
+        "discount":get_discount(soup)
+    })
+
+    return dict(item)

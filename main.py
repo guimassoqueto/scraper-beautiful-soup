@@ -1,7 +1,5 @@
 from app.settings import TIMESTAMP_FILE
 from app.helpers.fake_header import fake_header
-from app.helpers.database.postgres import PostgresDB
-from app.helpers.database.database_queries.queries import basic_select_query
 from app.helpers.rabbitmq.publisher import RabbitMQPublisher
 from app.helpers.rabbitmq.receiver import receiver
 from app.helpers.utils.timestamp_from_file import get_date_string
@@ -34,16 +32,15 @@ def message_handler(
     print(f"{len(non_inserted_pids)} pids received...")
     result = run(main(non_inserted_pids))
     if (result):
-        pg = PostgresDB()
-        pids = pg.select(basic_select_query(get_date_string(TIMESTAMP_FILE)))
         publisher = RabbitMQPublisher()
-        publisher.publish_pids([pid[0] for pid in pids])
-        channel.basic_ack(delivery_tag=method.delivery_tag) # message acknowledgement
-
+        publisher.publish_timestamp(get_date_string(TIMESTAMP_FILE))
+        channel.basic_ack(delivery_tag=method.delivery_tag)
+        print('Waiting for new messages. To exit press CTRL+C')
 
 
 if __name__ == "__main__":
     try:
+        print('Waiting for new messages. To exit press CTRL+C')
         receiver(message_handler)
     except KeyboardInterrupt:
         print('Interrupted')
