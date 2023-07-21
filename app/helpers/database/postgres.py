@@ -12,10 +12,3 @@ class PostgresDB:
         async with await psycopg.AsyncConnection.connect(self.conninfo) as aconn:
             async with aconn.cursor() as cur:
                 await cur.execute(upsert_query(table, item))
-
-    def select(self, select_query: str) -> List[tuple]:
-        with psycopg.connect(self.conninfo) as conn:
-            with conn.cursor() as cur:
-                records = cur.execute(select_query).fetchall()
-                conn.commit()
-                return records

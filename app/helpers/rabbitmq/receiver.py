@@ -25,6 +25,4 @@ def receiver(message_handler):
     auto_ack=False, # message acknoledgement
     on_message_callback=message_handler
   )
-
-  print('Waiting for new messages. To exit press CTRL+C')
   channel.start_consuming()

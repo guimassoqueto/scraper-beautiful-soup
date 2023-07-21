@@ -178,7 +178,14 @@ def get_previous_price(soup: BeautifulSoup):
     if basis_price_element: return convert_price_to_number(basis_price_element.text)
     del basis_price_element
     
-    return 0.0
+    # ração em tabela
+    basis_price_element = soup.find('span', {'class': 'a-price a-text-price a-size-base'})
+    if basis_price_element: 
+        previous_price = basis_price_element.find('span', {'class': 'a-offscreen'})
+        if previous_price: return convert_price_to_number(previous_price.text)
+    del basis_price_element
+    
+    return None
 
 
 def convert_discount_to_number(discount_string: str) -> int:
